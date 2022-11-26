@@ -124,7 +124,7 @@ def cluster_conformers(all_tauts):
 
 
 def main():
-    dataset_path = '/home/lukas/Downloads/chembl25.sdf'
+    dataset_path = 'data/chembl25.sdf'
 
     mols, tauts = compound_preprocessing(dataset_path, 5, num_tauts=5)
     tauts = generate_conformers_map(tauts)
