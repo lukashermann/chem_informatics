@@ -58,44 +58,50 @@ def visualize_results_2d(mol_probe, mol_dataset):
     Draw.MolToImage(mol_dataset, size=(500, 500)).show()
 
 
-def evaluate_probes(mols, mols_probe, tauts, tauts_probe, fepops, fepops_probe):
+def evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe):
     print(fepops.shape)
     print(fepops_probe.shape)
-
-    flat_tauts = np.array(list(chain(*tauts)))
-    flat_tauts_probe = np.array(list(chain(*tauts_probe)))
 
     for i, probe in enumerate(fepops_probe):
         sims = fepops_similarity(fepops, probe)
         print(f"Max similarity of r={np.max(sims)}")
         order = np.argsort(sims)[::-1]
-        visualize_results_3d(flat_tauts_probe[i], flat_tauts[order[0]])
+        best_index = order[0]
+        vis = input("Visualize? (y/N)")
+        if vis == "y":
+            visualize_results_2d(mols_probe[mol_index_probe[i]], mols[mol_index[best_index]])
+            # visualize_results_3d(tauts_probe[i], tauts[best_index])
 
 
-def main():
-    mols, tauts = load_mols()
-    fepops = load_fepops()
-
-    n_test = 1
+def split_test_set(mols, tauts, fepops, n_test=1):
+    # split data
     mols_probe = mols[-n_test:]
     tauts_probe = tauts[-n_test:]
     mols = mols[:-n_test]
     tauts = tauts[:-n_test]
     fepops_probe = fepops[-n_test:]
     fepops = fepops[:-n_test]
+
+    mol_index = np.repeat(np.arange(len(tauts)), [len(t) for t in tauts])
+    mol_index_probe = np.repeat(np.arange(len(tauts_probe)), [len(t) for t in tauts_probe])
+    flat_tauts = np.array(list(chain(*tauts)))
+    flat_tauts_probe = np.array(list(chain(*tauts_probe)))
+    # flat_tauts_probe = np.array([t[0] for t in tauts_probe])
+
     fepops_probe = np.array(list(chain(*fepops_probe)))
+    # fepops_probe = np.array([t[0] for t in fepops_probe])
     fepops = np.array(list(chain(*fepops)))
 
-    evaluate_probes(mols, mols_probe, tauts, tauts_probe, fepops,fepops_probe)
+    return mols, mols_probe, flat_tauts, flat_tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe
 
-    # a = np.random.random((5, 2, 3))
-    # b = np.random.random((2, 3))
 
-    # print(a.shape)
-    # print(b.shape)
+def main():
+    mols, tauts = load_mols()
+    fepops = load_fepops()
 
-    # r = pearson_r(a, b)
-    # print(r)
+    mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe = split_test_set(mols, tauts, fepops, n_test=5)
+
+    evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe)
 
 
 if __name__ == "__main__":
