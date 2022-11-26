@@ -1,6 +1,9 @@
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from itertools import chain
 import numpy as np
+from rdkit import Chem
 from sklearn.cluster import KMeans
 from sklearn_extra.cluster import KMedoids
 from tqdm import tqdm
@@ -9,6 +12,18 @@ from rdkit.Chem import rdDistGeom
 
 from preprocessing import compound_preprocessing
 from utils import timeit, get_hbd, get_hba, save_mols
+
+
+def worker(tauts):
+    etkdg = rdDistGeom.ETKDGv3()
+    etkdg.randomSeed = 0xa700f
+    etkdg.verbose = False
+    etkdg.numThreads = 0
+    conformer_num = 1024
+    etkdg.useRandomCoords = True  # CalcNumRotatableBonds(taut) > 5
+    for taut in tauts:
+        rdDistGeom.EmbedMultipleConfs(taut, numConfs=conformer_num, params=etkdg)
+    return tauts
 
 
 @timeit
@@ -26,6 +41,18 @@ def generate_conformers(all_tauts):
     for tauts in tqdm(all_tauts):
         for taut in tauts:
             rdDistGeom.EmbedMultipleConfs(taut, numConfs=conformer_num, params=etkdg)
+
+
+@timeit
+def generate_conformers_map(all_tauts):
+    print()
+    print("generating conformers")
+    print()
+    Chem.SetDefaultPickleProperties(Chem.PropertyPickleOptions.AllProps)
+    executor = ProcessPoolExecutor(multiprocessing.cpu_count())
+
+    all_tauts = list(executor.map(worker, all_tauts))
+    return all_tauts
 
 
 def get_features(mol, num_centroids=4):
@@ -99,12 +126,12 @@ def cluster_conformers(all_tauts):
 def main():
     dataset_path = '/home/lukas/Downloads/chembl25.sdf'
 
-    mols, tauts = compound_preprocessing(dataset_path, 300, num_tauts=5)
-    generate_conformers(tauts)
-    save_mols(mols, tauts)
+    mols, tauts = compound_preprocessing(dataset_path, 5, num_tauts=5)
+    tauts = generate_conformers_map(tauts)
+    # save_mols(mols, tauts)
 
     descriptors = cluster_conformers(tauts)
-    np.save("data/fepops_300.npy", descriptors)
+    # np.save("data/fepops_300.npy", descriptors)
 
 
 if __name__ == "__main__":
