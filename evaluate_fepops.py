@@ -1,12 +1,11 @@
-from functools import partial
-import pickle as pkl
 from itertools import chain
 
 import numpy as np
-from rdkit.Chem import PyMol, Draw
+from matplotlib import pyplot as plt
+from rdkit.Chem import PyMol, Draw, MolToSmiles
 
 from pangea_case_study import get_features
-from utils import load_mols, load_fepops
+from utils import load_mols, load_fepops, visualize_results_2d
 
 
 def corr(X, y):
@@ -32,6 +31,28 @@ def fepops_similarity(X, y):
     return best
 
 
+def remove_same_compounds(r, mol_index):
+    for mol_i in np.unique(mol_index):
+        taut_i = np.where(mol_index==mol_i)[0]
+        comb = [(x * 7, y * 7) for x in taut_i for y in taut_i if x <= y]
+        for x, y in comb:
+            r[x:x + 7, y:y + 7] = -1
+            r[y:y + 7, x:x + 7] = -1
+
+
+def fepops_similarity_matrix(X, mol_index):
+    X = np.reshape(X, (-1, X.shape[-1]))
+    X -= np.mean(X, axis=0)
+    X /= np.std(X, axis=0)
+
+    r = corr(X, X)
+    remove_same_compounds(r, mol_index)
+    r[np.tril_indices(r.shape[0])] = -1
+
+    best = np.dstack(np.unravel_index(np.argsort(r.ravel()), r.shape))[0][::-1]
+    return r, best
+
+
 def get_most_similar_conformers(mol1, mol2):
     feat1 = np.array(get_features(mol1))
     feat2 = np.array(get_features(mol2))
@@ -43,19 +64,13 @@ def get_most_similar_conformers(mol1, mol2):
     return int(i), int(j)
 
 
-def visualize_results_3d(mol_probe, mol_dataset):
-    conf_id_probe, conf_id_dataset = get_most_similar_conformers(mol_probe, mol_dataset)
-
+def visualize_results_3d(mol_1, mol_2):
+    conf_id_1, conf_id_2 = get_most_similar_conformers(mol_1, mol_2)
     v= PyMol.MolViewer()
     v.DeleteAll()
     v.server.do('set grid_mode, on')
-    v.ShowMol(mol_probe, confId=conf_id_probe, name="mol_probe", showOnly=False)
-    v.ShowMol(mol_dataset, confId=conf_id_dataset, name='mol_dataset', showOnly=False)
-
-
-def visualize_results_2d(mol_probe, mol_dataset):
-    Draw.MolToImage(mol_probe, size=(500, 500)).show()
-    Draw.MolToImage(mol_dataset, size=(500, 500)).show()
+    v.ShowMol(mol_1, confId=conf_id_1, name="mol_1", showOnly=False)
+    v.ShowMol(mol_2, confId=conf_id_2, name='mol_2', showOnly=False)
 
 
 def evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe):
@@ -71,6 +86,28 @@ def evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_p
         if vis == "y":
             visualize_results_2d(mols_probe[mol_index_probe[i]], mols[mol_index[best_index]])
             # visualize_results_3d(tauts_probe[i], tauts[best_index])
+
+
+def evaluate_dataset(mols, tauts, mol_index, fepops):
+    r_matrix, best_ids = fepops_similarity_matrix(fepops, mol_index)
+    # visualize_matrix(r_matrix)
+    # histogram_matrix(r_matrix)
+    top_1_percent = len(np.where(r_matrix > -1)[0]) * 0.01
+    best_ids = best_ids[:top_1_percent]
+    best_ids_tauts = (best_ids // 7).tolist()
+    best_ids_mols = [[mol_index[taut1], mol_index[taut2]] for taut1, taut2 in best_ids_tauts]
+    for (fep1, fep2), (taut_i_1, taut_i_2), (i, (mol_i_1, mol_i_2)) in zip(best_ids, best_ids_tauts, enumerate(best_ids_mols)):
+        mol1 = mols[mol_i_1]
+        mol2 = mols[mol_i_2]
+        if MolToSmiles(mol1) == MolToSmiles(mol2):
+            continue
+        if best_ids_mols.index([mol_i_1, mol_i_2]) < i:
+            continue
+        print(f"Similarity = {r_matrix[fep1, fep2]}")
+        visualize_results_2d(mol1, mol2)
+        vis = input("Visualize in 3D? (y/N)")
+        if vis == "y":
+            visualize_results_3d(tauts[taut_i_1], tauts[taut_i_2])
 
 
 def split_test_set(mols, tauts, fepops, n_test=1):
@@ -99,9 +136,10 @@ def main():
     mols, tauts = load_mols()
     fepops = load_fepops()
 
-    mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe = split_test_set(mols, tauts, fepops, n_test=5)
+    mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe = split_test_set(mols, tauts, fepops, n_test=1)
 
-    evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe)
+    # evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe)
+    evaluate_dataset(mols, tauts, mol_index, fepops)
 
 
 if __name__ == "__main__":

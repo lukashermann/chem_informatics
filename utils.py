@@ -2,8 +2,9 @@ import time
 import pickle as pkl
 
 import numpy as np
+from matplotlib import pyplot as plt
 from rdkit import Chem
-from rdkit.Chem import PyMol
+from rdkit.Chem import PyMol, Draw
 from rdkit.Chem.Lipinski import HDonorSmarts, HAcceptorSmarts
 
 
@@ -30,6 +31,25 @@ def viz_3d(mol, clear=True, grid=True, name="mol"):
     v.ShowMol(mol, confId=-1, name=name, showOnly=False)
 
 
+def visualize_matrix(r):
+    data = r[:500, :500]
+    data -= data.min()
+    data /= data.max()
+    plt.figure(figsize=(20, 20))
+    plt.imshow(data)
+    plt.show()
+
+
+def histogram_matrix(r_matrix):
+    plt.hist(r_matrix.ravel(), bins=30, range=(-0.9999, 1))
+    plt.show()
+
+
+def visualize_results_2d(mol_1, mol_2):
+    Draw.MolToImage(mol_1, size=(500, 500))
+    Draw.MolToImage(mol_2, size=(500, 500))
+
+
 def get_hbd(mol):
     f = lambda x, y=HDonorSmarts: x.GetSubstructMatches(y, uniquify=1)
     return [x[0] for x in f(mol)]
@@ -40,24 +60,28 @@ def get_hba(mol):
     return [x[0] for x in f(mol)]
 
 
-def save_mols(mols, tauts):
+def save_mols(mols, tauts, name_suffix=""):
     Chem.SetDefaultPickleProperties(Chem.PropertyPickleOptions.AllProps)
-    with open(r"data/mols_300.pkl", "wb") as file:
+    with open(rf"data/mols_{name_suffix}.pkl", "wb") as file:
         pkl.dump(mols, file)
-    with open(r"data/tauts_300.pkl", "wb") as file:
+    with open(rf"data/tauts_{name_suffix}.pkl", "wb") as file:
         pkl.dump(tauts, file)
 
 
-def load_mols():
-    with open(r"data/mols_300.pkl", "rb") as file:
+def load_mols(name_suffix=""):
+    with open(rf"data/mols_{name_suffix}.pkl", "rb") as file:
         mols = pkl.load(file)
-    with open(r"data/tauts_300.pkl", "rb") as file:
+    with open(rf"data/tauts_{name_suffix}.pkl", "rb") as file:
         tauts = pkl.load(file)
     return mols, tauts
 
 
-def load_fepops():
-    fepops = np.load("data/fepops_300.npy", allow_pickle=True)
+def save_fepops(fepops, name_suffix=""):
+    np.save(f"data/fepops_{name_suffix}.npy", fepops)
+
+
+def load_fepops(name_suffix=""):
+    fepops = np.load(f"data/fepops_{name_suffix}.npy", allow_pickle=True)
     return fepops
 
 #  v.AddPharmacophore(conf.GetPositions()[hbd].tolist(), [(1, 0, 0) for _ in range(len(hbd))], label="HBD")
