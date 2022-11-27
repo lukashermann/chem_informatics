@@ -92,7 +92,7 @@ def evaluate_dataset(mols, tauts, mol_index, fepops):
     r_matrix, best_ids = fepops_similarity_matrix(fepops, mol_index)
     # visualize_matrix(r_matrix)
     # histogram_matrix(r_matrix)
-    top_1_percent = len(np.where(r_matrix > -1)[0]) * 0.01
+    top_1_percent = int(len(np.where(r_matrix > -1)[0]) * 0.01)
     best_ids = best_ids[:top_1_percent]
     best_ids_tauts = (best_ids // 7).tolist()
     best_ids_mols = [[mol_index[taut1], mol_index[taut2]] for taut1, taut2 in best_ids_tauts]

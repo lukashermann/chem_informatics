@@ -46,8 +46,8 @@ def histogram_matrix(r_matrix):
 
 
 def visualize_results_2d(mol_1, mol_2):
-    Draw.MolToImage(mol_1, size=(500, 500))
-    Draw.MolToImage(mol_2, size=(500, 500))
+    Draw.MolToImage(mol_1, size=(500, 500)).show()
+    Draw.MolToImage(mol_2, size=(500, 500)).show()
 
 
 def get_hbd(mol):
