@@ -1,3 +1,4 @@
+import os
 import time
 import pickle as pkl
 
@@ -83,6 +84,7 @@ def get_hba(mol):
 
 
 def save_mols(mols, tauts, name_suffix=""):
+    os.makedirs("data", exist_ok=True)
     Chem.SetDefaultPickleProperties(Chem.PropertyPickleOptions.AllProps)
     with open(rf"data/mols_{name_suffix}.pkl", "wb") as file:
         pkl.dump(mols, file)
@@ -99,6 +101,7 @@ def load_mols(name_suffix=""):
 
 
 def save_fepops(fepops, name_suffix=""):
+    os.makedirs("data", exist_ok=True)
     np.save(f"data/fepops_{name_suffix}.npy", fepops)
 
 
