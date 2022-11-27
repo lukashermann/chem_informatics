@@ -31,8 +31,15 @@ def viz_3d(mol, clear=True, grid=True, name="mol"):
     v.ShowMol(mol, confId=-1, name=name, showOnly=False)
 
 
-def visualize_matrix(r):
-    data = r[:500, :500]
+def visualize_matrix(r, num_rows=500):
+    """
+    Plot the correlation matrix.
+
+    Args:
+        r: Correlation matrix.
+        num_rows: Show only num_rows x num_rows as subset of matrix
+    """
+    data = r[:num_rows, :num_rows]
     data -= data.min()
     data /= data.max()
     plt.figure(figsize=(20, 20))
@@ -41,21 +48,36 @@ def visualize_matrix(r):
 
 
 def histogram_matrix(r_matrix):
+    """
+    Plot a histogram of correlations.
+
+    Args:
+        r_matrix: Correlation matrix.
+    """
     plt.hist(r_matrix.ravel(), bins=30, range=(-0.9999, 1))
     plt.show()
 
 
 def visualize_results_2d(mol_1, mol_2):
+    """
+    Visualize two molecules.
+    """
     Draw.MolToImage(mol_1, size=(500, 500)).show()
     Draw.MolToImage(mol_2, size=(500, 500)).show()
 
 
 def get_hbd(mol):
+    """
+    Get number of hydrogen bond donors in molecule.
+    """
     f = lambda x, y=HDonorSmarts: x.GetSubstructMatches(y, uniquify=1)
     return [x[0] for x in f(mol)]
 
 
 def get_hba(mol):
+    """
+    Get number of hydrogen bond acceptors in molecule.
+    """
     f = lambda x, y=HAcceptorSmarts: x.GetSubstructMatches(y, uniquify=1)
     return [x[0] for x in f(mol)]
 

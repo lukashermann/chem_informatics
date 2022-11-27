@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from rdkit.Chem import rdDistGeom
 
-from preprocessing import preprocess_dataset
+from preprocessing import preprocess_dataset, preprocess_smiles
 from utils import timeit, get_hbd, get_hba, save_mols, save_fepops
 
 
@@ -174,6 +174,13 @@ def compute_fepops(all_tauts):
             fepops_tauts.append(fepops)
         all_fepops.append(fepops_tauts)
     return all_fepops
+
+
+def smiles_to_fepops(smiles):
+    mol, tauts = preprocess_smiles(smiles)
+    generate_conformers([tauts])
+    fepops = np.array(compute_fepops([tauts])[0])
+    return fepops
 
 
 def main():

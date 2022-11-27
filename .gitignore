@@ -2,3 +2,4 @@ repos/*
 __pycache__/
 .idea
 data/*
+.ipynb_checkpoints

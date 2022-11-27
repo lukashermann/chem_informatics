@@ -137,6 +137,32 @@ def enumerate_and_preprocess_tautomers(mol, enumerator, num_tauts=-1):
     return processed_tauts
 
 
+def preprocess_smiles(smiles, num_tauts=5):
+    """
+    Run the preprocessing pipeline for a single probe compound.
+
+    Args:
+        smiles: SMILES of the probe.
+        num_tauts: Number of tautomers to enumerate.
+
+    Returns:
+        List of one input molecule.
+        List of list of tautomers of input molecule.
+    """
+    np.random.seed(0)
+    salt_remover = SaltRemover()
+    enumerator = TautomerEnumerator()
+
+    mol = MolFromSmiles(smiles)
+    stripped_mol = salt_remover.StripMol(mol)
+    Kekulize(stripped_mol, clearAromaticFlags=True)
+    tauts = enumerate_and_preprocess_tautomers(stripped_mol, enumerator, num_tauts)
+    assert len(tauts) > 0
+
+    compute_atomic_log_p(tauts)
+    return stripped_mol, tauts
+
+
 def preprocess_dataset(path, num_compounds, num_tauts=-1):
     """
     Load and preprocess dataset.

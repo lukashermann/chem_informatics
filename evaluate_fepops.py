@@ -1,10 +1,9 @@
 from itertools import chain
 
 import numpy as np
-from matplotlib import pyplot as plt
 from rdkit.Chem import PyMol, Draw, MolToSmiles
 
-from pangea_case_study import get_features
+from fepops import get_features
 from utils import load_mols, load_fepops, visualize_results_2d
 
 
@@ -133,13 +132,14 @@ def split_test_set(mols, tauts, fepops, n_test=1):
 
 
 def main():
-    mols, tauts = load_mols()
-    fepops = load_fepops()
+    name_suffix = 500
+    mols, tauts = load_mols(name_suffix=name_suffix)
+    fepops = load_fepops(name_suffix=name_suffix)
 
     mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe = split_test_set(mols, tauts, fepops, n_test=1)
 
-    # evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe)
-    evaluate_dataset(mols, tauts, mol_index, fepops)
+    evaluate_probes(mols, mols_probe, tauts, tauts_probe, mol_index, mol_index_probe, fepops, fepops_probe)
+    # evaluate_dataset(mols, tauts, mol_index, fepops)
 
 
 if __name__ == "__main__":
