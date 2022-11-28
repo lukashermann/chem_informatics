@@ -102,7 +102,7 @@ def load_mols(name_suffix=""):
 
 def save_fepops(fepops, name_suffix=""):
     os.makedirs("data", exist_ok=True)
-    np.save(f"data/fepops_{name_suffix}.npy", fepops)
+    np.save(f"data/fepops_{name_suffix}.npy", np.array(fepops, dtype=object))
 
 
 def load_fepops(name_suffix=""):

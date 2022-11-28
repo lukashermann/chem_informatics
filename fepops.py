@@ -13,13 +13,13 @@ from preprocessing import preprocess_dataset, preprocess_smiles
 from utils import timeit, get_hbd, get_hba, save_mols, save_fepops
 
 
-def generate_conformers(all_tauts, num_conformers=1024):
+def generate_conformers(all_tauts, max_conformers=1024):
     """
     Compute conformers for every molecule in all_tauts. Molecules get modified in place.
 
     Args:
         all_tauts: List of lists of tautomers.
-        num_conformers: How many conformers per tautomer.
+        max_conformers: How many conformers per tautomer.
     """
     print()
     print("Generating conformers:")
@@ -34,7 +34,9 @@ def generate_conformers(all_tauts, num_conformers=1024):
     for tauts in tqdm(all_tauts):
         for taut in tauts:
             # If molecules have more than 5 rotatable bonds, sample conformers at random.
-            etkdg.useRandomCoords = CalcNumRotatableBonds(taut) > 5
+            num_rot = CalcNumRotatableBonds(taut)
+            etkdg.useRandomCoords = num_rot > 5
+            num_conformers = min(max_conformers, 4 ** num_rot)
             # Compute conformers
             rdDistGeom.EmbedMultipleConfs(taut, numConfs=num_conformers, params=etkdg)
 
@@ -138,15 +140,18 @@ def cluster_features(charges, log_ps, hbd, hba, n_centroids, positions):
 def get_medoids(conf_feats):
     """
     Cluster conformer features with K-medoids.
+    If less than 7 conformers, repeat conformers to get to 7.
 
     Args:
-        conf_feats: List of features for every conformer. (1024 x 22)
+        conf_feats: List of features for every conformer. (n_conf x 22)
 
     Returns:
         7 Medoids of conformer features. (7 x 22)
     """
     conf_feats = np.array(conf_feats)
-    assert conf_feats.shape[0] >= 7
+    n_conf = conf_feats.shape[0]
+    if n_conf < 7:
+        return np.pad(conf_feats, ((7 - n_conf, 0), (0, 0)), 'edge')
     kmedo = KMedoids(n_clusters=7, random_state=0).fit(conf_feats)
     return kmedo.cluster_centers_
 
@@ -177,6 +182,15 @@ def compute_fepops(all_tauts):
 
 
 def smiles_to_fepops(smiles):
+    """
+    Compute FEPOPS for input SMILES.
+
+    Args:
+        smiles: Input SMILES
+
+    Returns:
+        FEPOPS descriptor.
+    """
     mol, tauts = preprocess_smiles(smiles)
     generate_conformers([tauts])
     fepops = np.array(compute_fepops([tauts])[0])
@@ -191,12 +205,13 @@ def main():
     parser.add_argument("-p", "--dataset_path", type=str, help="Path to chemical dataset in SDF format.")
     parser.add_argument("-n", "--num_molecules", type=int, default=500, help="Number of molecules to process.")
     parser.add_argument("--num_tautomers", type=int, default=5, help="Max number of tautomers per molecule.")
+    parser.add_argument("-c", "--conformers", type=int, default=1024, help="Max number of conformers per molecule.")
     parser.add_argument("-s", "--suffix", type=str, default="test", help="Save files with name suffix")
 
     args = parser.parse_args()
 
     mols, tauts = preprocess_dataset(args.dataset_path, args.num_molecules, num_tauts=args.num_tautomers)
-    generate_conformers(tauts)
+    generate_conformers(tauts, max_conformers=args.conformers)
     save_mols(mols, tauts, name_suffix=args.suffix)
 
     fepops = compute_fepops(tauts)
