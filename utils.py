@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from rdkit import Chem
 from rdkit.Chem import PyMol, Draw
-from rdkit.Chem.Lipinski import HDonorSmarts, HAcceptorSmarts
+from rdkit.Chem.Lipinski import _HDonors, _HAcceptors
 
 
 def timeit(method):
@@ -40,7 +40,7 @@ def visualize_matrix(r, num_rows=500):
         r: Correlation matrix.
         num_rows: Show only num_rows x num_rows as subset of matrix
     """
-    data = r[:num_rows, :num_rows]
+    data = r[:num_rows, :num_rows].copy()
     data -= data.min()
     data /= data.max()
     plt.figure(figsize=(20, 20))
@@ -71,16 +71,14 @@ def get_hbd(mol):
     """
     Get number of hydrogen bond donors in molecule.
     """
-    f = lambda x, y=HDonorSmarts: x.GetSubstructMatches(y, uniquify=1)
-    return [x[0] for x in f(mol)]
+    return [x[0] for x in _HDonors(mol)]
 
 
 def get_hba(mol):
     """
     Get number of hydrogen bond acceptors in molecule.
     """
-    f = lambda x, y=HAcceptorSmarts: x.GetSubstructMatches(y, uniquify=1)
-    return [x[0] for x in f(mol)]
+    return [x[0] for x in _HAcceptors(mol)]
 
 
 def save_mols(mols, tauts, name_suffix=""):

@@ -174,7 +174,9 @@ def compute_fepops(all_tauts):
     for tauts in tqdm(all_tauts):
         fepops_tauts = []
         for taut in tauts:
+            # Compute features for all conformers
             conf_feats = get_features(taut)
+            # Cluster to 7 representative feature vectors
             fepops = get_medoids(conf_feats)
             fepops_tauts.append(fepops)
         all_fepops.append(fepops_tauts)

@@ -88,17 +88,16 @@ def compute_gasteiger_charges(mol):
     return True
 
 
-def compute_atomic_log_p(tauts):
+def compute_atomic_log_p(mol):
     """
     Compute atomic log P contribution for every atom using Wildman-Crippen approach.
     (in-place).
 
     Args:
-        tauts: List of tautomers.
+        mol: Molecule.
     """
-    for taut in tauts:
-        for atom, atomic_log_p in zip(taut.GetAtoms(), _CalcCrippenContribs(taut)):
-            atom.SetProp("logP", str(atomic_log_p[0]))
+    for atom, atomic_log_p in zip(mol.GetAtoms(), _CalcCrippenContribs(mol)):
+        atom.SetProp("logP", str(atomic_log_p[0]))
 
 
 def enumerate_and_preprocess_tautomers(mol, enumerator, num_tauts=-1):
@@ -130,6 +129,7 @@ def enumerate_and_preprocess_tautomers(mol, enumerator, num_tauts=-1):
             continue
         if not compute_gasteiger_charges(taut):
             continue
+        compute_atomic_log_p(taut)
         processed_tauts.append(taut)
         # Only enumerate num_tauts tautomers
         if num_tauts != -1 and len(processed_tauts) >= num_tauts:
@@ -159,7 +159,6 @@ def preprocess_smiles(smiles, num_tauts=5):
     tauts = enumerate_and_preprocess_tautomers(stripped_mol, enumerator, num_tauts)
     assert len(tauts) > 0
 
-    compute_atomic_log_p(tauts)
     return stripped_mol, tauts
 
 
@@ -186,7 +185,7 @@ def preprocess_dataset(path, num_compounds, num_tauts=-1):
 
     mols = []
     all_tauts = []
-    hash_table = {}
+    previous_smiles = set()
 
     i = 0
     with tqdm(total=num_compounds) as pbar:
@@ -195,10 +194,8 @@ def preprocess_dataset(path, num_compounds, num_tauts=-1):
             Kekulize(stripped_mol, clearAromaticFlags=True)
             # Check for duplicates
             smiles = Chem.MolToSmiles(stripped_mol)
-            smiles_hash = hash(smiles)
-            if smiles_hash in hash_table:
-                if smiles == Chem.MolToSmiles(mols[hash_table[smiles_hash]]):
-                    continue
+            if smiles in previous_smiles:
+                continue
             if not apply_filters(stripped_mol):
                 continue
 
@@ -206,11 +203,9 @@ def preprocess_dataset(path, num_compounds, num_tauts=-1):
             if len(tauts) == 0:
                 continue
 
-            compute_atomic_log_p(tauts)
-
             mols.append(stripped_mol)
             all_tauts.append(tauts)
-            hash_table[smiles_hash] = i
+            previous_smiles.add(smiles)
             i += 1
             pbar.update(1)
             if i >= num_compounds:
